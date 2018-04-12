@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gmodule.h>
+#include <unistd.h>
 
 #include "inode.h"
 #include "superblock.h"
@@ -8,6 +9,31 @@
 
 extern SUPERBLOCK *superblock;
 extern GHashTable *inode_index;
+extern int fd;
+
+void write_inode(INODE *in)
+{
+    int l[2];
+    get_inode_location(in->inode_number, l);
+
+    printf("write inode: %d %ld\n", in->inode_number, sizeof(INODE));
+
+    lseek(fd, (l[0]*BLOCK_SIZE) + l[1], SEEK_SET);
+    write(fd, in, sizeof(INODE));
+}
+
+INODE *read_inode(int i)
+{
+    int l[2];
+    get_inode_location(i, l);
+
+    printf("read inode: %d %ld\n", i, sizeof(INODE));
+
+    INODE *inode = calloc(1, sizeof(INODE));
+    lseek(fd, (l[0]*BLOCK_SIZE) + l[1], SEEK_SET);
+    read(fd, inode, sizeof(INODE));
+    return inode;
+}
 
 /* inode starts from 1 */
 void get_inode_location(int i, int *location)
@@ -29,24 +55,13 @@ INODE *get_inode(int i)
     if (inode)
         return inode;
 
-    int l[2];
-    get_inode_location(i, l);
-
-    inode = calloc(1, sizeof(INODE));
-    inode->inode_number = i;
-    inode->reference_count = 1;
-    inode->used_entries = 1;
-    inode->filetype = DIRECTORY; /* tmp idea */
-
-    return inode;
+    printf("no cache\n");
+    return read_inode(i);
 }
 
 /* create new inode */
 INODE *inode_alloc(int i, int filetype)
 {
-    int l[2];
-    get_inode_location(i, l);
-
     INODE *inode = calloc(1, sizeof(INODE));
     inode->inode_number = i;
     inode->reference_count = 1;
@@ -56,6 +71,7 @@ INODE *inode_alloc(int i, int filetype)
     g_hash_table_insert(inode_index, GINT_TO_POINTER(i), inode);
 
     /* if needed write to disk */
+    write_inode(inode);
     return inode;
 }
 
@@ -84,4 +100,3 @@ int get_free_inode()
     printf("ERROR: No inodes free\n");
     return -1;
 }
-

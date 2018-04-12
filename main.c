@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <gmodule.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "inode.h"
 #include "directories.h"
@@ -12,7 +16,9 @@ extern S_DIRECTORY *root_dir;
 GHashTable *inode_index = NULL;
 extern GHashTable *directory_index;
 
-void init_fs()
+int fd = -1;
+
+void init_fs(char *fs_name)
 {
     inode_index = g_hash_table_new(g_direct_hash, g_direct_equal);
     directory_index = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -20,6 +26,8 @@ void init_fs()
 
     /* we'll create a root directory also */
     root_dir = mk_root();
+
+    fd = open(fs_name, O_RDWR|O_CREAT, S_IRWXU|S_IRGRP|S_IROTH);
 }
 
 void _listdir(S_DIRECTORY *dir)
@@ -91,7 +99,7 @@ void listdir(char *dir)
 }
 
 /* always absolute path should be given */
-void mkdir(char *dirname)
+void makedir(char *dirname)
 {
     char *dd = strdup(dirname);
     S_DIRECTORY *root = root_dir;
@@ -109,10 +117,12 @@ void mkdir(char *dirname)
         {
             if (dir_entry[j].inode_number == 0)
                 continue;
+            printf(">%s %s\n", d, dir_entry[j].filename);
             if (strcmp(d, dir_entry[j].filename) == 0)
             {
                 if (dir_entry[j].inode_number != root->dir_entry[1].inode_number)
                 {
+                    printf("<<<\n");
                     INODE *di = get_inode(dir_entry[j].inode_number);
                     S_DIRECTORY *new_root = get_directory(di, root->dir_entry[1].inode_number);
                     if (di->filetype == DIRECTORY)
@@ -140,6 +150,7 @@ void mkdir(char *dirname)
         {
             // printf("make new directory: %d %s %ld\n", root->dir_entry[0].inode_number, pos, strlen(pos));
 
+            printf("alloc\n");
             int i = get_free_inode();
             INODE *di = inode_alloc(i, DIRECTORY);
 
@@ -155,10 +166,37 @@ void mkdir(char *dirname)
     printf("Directory already existing: %s ==> %s\n", d, dirname);
 }
 
+void shell()
+{
+    while (1)
+    {
+        char buffer[20];
+        memset(buffer, 0, 20);
+        write(1, "> ", 2);
+        read(0, buffer, 19);
+        char *cmd = strtok(buffer, " ");
+        char *dir = strtok(NULL, " ");
+
+        if (strncmp(cmd, "e", 1) == 0)
+            break;
+
+        dir[strlen(dir)-1] = 0;
+
+        if (strcmp(cmd, "ld") == 0)
+            listdir(dir);
+        else if (strcmp(cmd, "md") == 0)
+            makedir(dir);
+        else
+            printf("Not implemented");
+
+        printf("\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
     printf("%p %p\n", superblock, root_dir);
-    init_fs();
+    init_fs("network.fs");
     printf("%p %p\n", superblock, root_dir);
 
     int l[2];
@@ -170,16 +208,22 @@ int main(int argc, char *argv[])
     // INODE *inode = inode_alloc(i, REGULAR);
     // printf(">> %d %d\n", inode->inode_number, inode->filetype);
 
+    /*
     printf("=============\n");
     listdir("/");
     printf("=============\n");
-    mkdir(argv[1]);
+    makedir(argv[1]);
     printf("=============\n");
     listdir("/");
     printf("=============\n");
-    mkdir(argv[2]);
+    makedir(argv[2]);
     printf("=============\n");
-    listdir("/d");
+    listdir("/r");
     printf("=============\n");
+    */
+
+    shell();
+
+    close(fd);
     return 0;
 }

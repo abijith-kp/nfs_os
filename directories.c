@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gmodule.h>
+#include <stdio.h>
 
 #include "directories.h"
 
@@ -47,9 +48,11 @@ void add_entry_to_parent(S_DIRECTORY *parent, char *c_name, int c_inode)
 S_DIRECTORY *get_directory(INODE *in, int parent_inode)
 {
     S_DIRECTORY *dir = g_hash_table_lookup(directory_index, GINT_TO_POINTER(in->inode_number));
+    printf("dir checking in cache\n");
     if (dir)
         return dir;
 
+    printf("dir created\n");
     dir = calloc(1, sizeof(S_DIRECTORY));
     strncpy((dir->dir_entry[0]).filename, CUR_DIR, MAX_FILE_NAME);
     strncpy((dir->dir_entry[1]).filename, PARENT_DIR, MAX_FILE_NAME);
