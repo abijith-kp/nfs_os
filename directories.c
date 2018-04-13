@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
-#include <gmodule.h>
 #include <stdio.h>
 
+#include "avl.h"
 #include "directories.h"
 
-GHashTable *directory_index = NULL;
+NODE *directory_index = NULL;
 
 void write_directory(S_DIRECTORY *dir)
 {
@@ -28,7 +28,8 @@ S_DIRECTORY *mk_root()
 
     /* write_directory(dir); */
     /* writing into cache as of now */
-    g_hash_table_insert(directory_index, GINT_TO_POINTER(i), dir);
+    // g_hash_table_insert(directory_index, GINT_TO_POINTER(i), dir);
+    insert_avl(&directory_index, dir, i);
     return dir;
 }
 
@@ -47,7 +48,8 @@ void add_entry_to_parent(S_DIRECTORY *parent, char *c_name, int c_inode)
 
 S_DIRECTORY *get_directory(INODE *in, int parent_inode)
 {
-    S_DIRECTORY *dir = g_hash_table_lookup(directory_index, GINT_TO_POINTER(in->inode_number));
+    // S_DIRECTORY *dir = g_hash_table_lookup(directory_index, GINT_TO_POINTER(in->inode_number));
+    S_DIRECTORY *dir = lookup_avl(directory_index, in->inode_number);
     printf("dir checking in cache\n");
     if (dir)
         return dir;
@@ -61,7 +63,8 @@ S_DIRECTORY *get_directory(INODE *in, int parent_inode)
     (dir->dir_entry[1]).inode_number = parent_inode;
 
     /* write_directory(dir); */
-    g_hash_table_insert(directory_index, GINT_TO_POINTER(in->inode_number), dir);
+    // g_hash_table_insert(directory_index, GINT_TO_POINTER(in->inode_number), dir);
+    insert_avl(&directory_index, dir, in->inode_number);
 
     return dir;
 }

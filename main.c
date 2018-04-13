@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
-#include <gmodule.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "avl.h"
 #include "inode.h"
 #include "directories.h"
 #include "superblock.h"
@@ -13,15 +13,15 @@
 extern SUPERBLOCK *superblock;
 extern S_DIRECTORY *root_dir;
 
-GHashTable *inode_index = NULL;
-extern GHashTable *directory_index;
+NODE *inode_index = NULL;
+extern NODE *directory_index;
 
 int fd = -1;
 
 void init_fs(char *fs_name)
 {
-    inode_index = g_hash_table_new(g_direct_hash, g_direct_equal);
-    directory_index = g_hash_table_new(g_direct_hash, g_direct_equal);
+    // inode_index = g_hash_table_new(g_direct_hash, g_direct_equal);
+    // directory_index = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     init_superblock();
 

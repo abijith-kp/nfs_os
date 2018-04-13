@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <gmodule.h>
 #include <unistd.h>
 
+#include "avl.h"
 #include "inode.h"
 #include "superblock.h"
 #include "constants.h"
 
 extern SUPERBLOCK *superblock;
-extern GHashTable *inode_index;
+extern NODE *inode_index;
 extern int fd;
 
 void write_inode(INODE *in)
@@ -51,7 +51,8 @@ void get_inode_location(int i, int *location)
 INODE *get_inode(int i)
 {
     /* cache lookup */
-    INODE *inode = g_hash_table_lookup(inode_index, GINT_TO_POINTER(i));
+    // INODE *inode = g_hash_table_lookup(inode_index, GINT_TO_POINTER(i));
+    INODE *inode = lookup_avl(inode_index, i);
     if (inode)
         return inode;
 
@@ -68,7 +69,8 @@ INODE *inode_alloc(int i, int filetype)
     inode->used_entries = 1;
     inode->filetype = filetype;
 
-    g_hash_table_insert(inode_index, GINT_TO_POINTER(i), inode);
+    // g_hash_table_insert(inode_index, GINT_TO_POINTER(i), inode);
+    insert_avl(&inode_index, inode, i);
 
     /* if needed write to disk */
     write_inode(inode);
