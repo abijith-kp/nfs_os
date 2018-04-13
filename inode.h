@@ -26,6 +26,7 @@ typedef struct
     int filetype;
 
     int reference_count;
+    int size;
 
 } INODE;
 

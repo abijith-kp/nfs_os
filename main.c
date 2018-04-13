@@ -22,6 +22,7 @@ void init_fs(char *fs_name)
 {
     inode_index = g_hash_table_new(g_direct_hash, g_direct_equal);
     directory_index = g_hash_table_new(g_direct_hash, g_direct_equal);
+
     init_superblock();
 
     /* we'll create a root directory also */
@@ -182,9 +183,9 @@ void shell()
 
         dir[strlen(dir)-1] = 0;
 
-        if (strcmp(cmd, "ld") == 0)
+        if (strcmp(cmd, "ls") == 0)
             listdir(dir);
-        else if (strcmp(cmd, "md") == 0)
+        else if (strcmp(cmd, "mk") == 0)
             makedir(dir);
         else
             printf("Not implemented");
@@ -195,9 +196,9 @@ void shell()
 
 int main(int argc, char *argv[])
 {
-    printf("%p %p\n", superblock, root_dir);
+    // printf("%p %p\n", superblock, root_dir);
     init_fs("network.fs");
-    printf("%p %p\n", superblock, root_dir);
+    // printf("%p %p\n", superblock, root_dir);
 
     int l[2];
     get_inode_location(1, l);
