@@ -8,7 +8,7 @@
       from the client will work with resopect with this saved current directory
     * 
 
-Client-Server archetecture:
+2. Client-Server archetecture:
     * Multithreaded server which can serve to multiple clients
     * Client will be single threaded
     * Client:
