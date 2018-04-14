@@ -194,36 +194,55 @@ void shell()
     }
 }
 
+int length(char *argv[])
+{
+    int l = 0;
+    while (*argv++)
+        l++;
+    return l;
+}
+
+
+void run_test()
+{
+    char *cmd[][10] = {
+                        { "ls", "/", NULL },
+                        { "mk", "/d", NULL },
+                        { "ls", "/", NULL },
+                        { "e", NULL },
+                        { NULL }
+                      };
+
+    int i=0;
+    printf("------------\n");
+    while (cmd[i][0])
+    {
+        for (int j=0; j<length(cmd[i]); j++)
+            printf("%s ", cmd[i][j]);
+
+        printf("\n\n");
+
+        if (strcmp(cmd[i][0], "ls") == 0)
+            listdir(cmd[i][1]);
+        else if (strcmp(cmd[i][0], "mk") == 0)
+            makedir(cmd[i][1]);
+        else if (strcmp(cmd[i][0], "e") == 0)
+            break;
+
+        i++;
+        printf("------------\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    // printf("%p %p\n", superblock, root_dir);
     init_fs("network.fs");
-    // printf("%p %p\n", superblock, root_dir);
 
-    int l[2];
-    get_inode_location(1, l);
-    printf("|| %d %d\n", l[0], l[1]);
-    int i = 0;
-    // printf("inode: %d\n", (i = get_free_inode()));
-
-    // INODE *inode = inode_alloc(i, REGULAR);
-    // printf(">> %d %d\n", inode->inode_number, inode->filetype);
-
-    /*
-    printf("=============\n");
-    listdir("/");
-    printf("=============\n");
-    makedir(argv[1]);
-    printf("=============\n");
-    listdir("/");
-    printf("=============\n");
-    makedir(argv[2]);
-    printf("=============\n");
-    listdir("/r");
-    printf("=============\n");
-    */
-
+    #ifdef TEST
+    run_test();
+    #else
     shell();
+    #endif
 
     close(fd);
     return 0;
