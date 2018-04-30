@@ -31,8 +31,10 @@ typedef struct
 } INODE;
 
 void get_inode_location(int i, int *location);
-INODE *inode_alloc(int i, int filetype);
-INODE *get_inode(int i);
+INODE *alloc_inode(int filetype);
+INODE *get_inode(int inode);
 int get_free_inode();
+void write_inode(INODE *n_inode);
+void add_inode_to_free_list(int i);
 
 #endif

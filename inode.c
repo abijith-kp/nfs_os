@@ -1,83 +1,53 @@
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "avl.h"
 #include "inode.h"
 #include "superblock.h"
-#include "constants.h"
 
 extern SUPERBLOCK *superblock;
-extern NODE *inode_index;
 extern int fd;
 
-void write_inode(INODE *in)
+void write_inode(INODE *n_inode)
 {
-    int l[2];
-    get_inode_location(in->inode_number, l);
-
-    printf("write inode: %d %ld\n", in->inode_number, sizeof(INODE));
-
-    lseek(fd, (l[0]*BLOCK_SIZE) + l[1], SEEK_SET);
-    write(fd, in, sizeof(INODE));
+    int i = n_inode->inode_number;
+    int ssize = sizeof(SUPERBLOCK);
+    int offset = ssize + ((i - 1) * sizeof(INODE));
+    lseek(fd, offset, SEEK_SET);
+    write(fd, n_inode, sizeof(INODE));
 }
 
-INODE *read_inode(int i)
+INODE *get_inode(int inode)
 {
-    int l[2];
-    get_inode_location(i, l);
-
-    printf("read inode: %d %ld\n", i, sizeof(INODE));
-
-    INODE *inode = calloc(1, sizeof(INODE));
-    lseek(fd, (l[0]*BLOCK_SIZE) + l[1], SEEK_SET);
-    read(fd, inode, sizeof(INODE));
-    return inode;
+    int ssize = sizeof(SUPERBLOCK);
+    int offset = ssize + ((inode - 1) * sizeof(INODE));
+    INODE *c_inode = calloc(1, sizeof(INODE));
+    lseek(fd, offset, SEEK_SET);
+    read(fd, c_inode, sizeof(INODE));
+    return c_inode;
 }
 
-/* inode starts from 1 */
-void get_inode_location(int i, int *location)
+INODE *alloc_inode(int filetype)
 {
-    int sb_size = (sizeof(SUPERBLOCK) / BLOCK_SIZE) + 1;
-    int ni_block = BLOCK_SIZE / sizeof(INODE);
+    int i = get_free_inode();
+    INODE *n_inode = calloc(1, sizeof(INODE));
 
-    location[0] = ((i - 1) / ni_block) + sb_size; /* block no. */
-    location[1] = ((i - 1) % ni_block) * sizeof(INODE);
+    n_inode->inode_number = i;
+    n_inode->filetype = filetype;
+    n_inode->used_entries = 0;
+    n_inode->size = i;
+
+    int ssize = sizeof(SUPERBLOCK);
+    int offset = ssize + ((i - 1) * sizeof(INODE));
+    lseek(fd, offset, SEEK_SET);
+    write(fd, n_inode, sizeof(INODE));
+    return n_inode;
 }
 
-
-/* TODO: read from cache or disk */
-/* Temp we create  new inode struct */
-INODE *get_inode(int i)
-{
-    /* cache lookup */
-    // INODE *inode = g_hash_table_lookup(inode_index, GINT_TO_POINTER(i));
-    INODE *inode = lookup_avl(inode_index, i);
-    if (inode)
-        return inode;
-
-    printf("no cache\n");
-    return read_inode(i);
-}
-
-/* create new inode */
-INODE *inode_alloc(int i, int filetype)
-{
-    INODE *inode = calloc(1, sizeof(INODE));
-    inode->inode_number = i;
-    inode->reference_count = 1;
-    inode->used_entries = 1;
-    inode->filetype = filetype;
-
-    // g_hash_table_insert(inode_index, GINT_TO_POINTER(i), inode);
-    insert_avl(&inode_index, inode, i);
-
-    /* if needed write to disk */
-    write_inode(inode);
-    return inode;
-}
-
-/* acts like iget() */
 int get_free_inode()
 {
     int i = superblock->free_inode_index;
@@ -89,8 +59,8 @@ int get_free_inode()
 
         if (0 == (superblock->free_inodes_list[t] & c))
         {
-            superblock->free_inodes_list[i] = 1;
-            superblock->free_inode_index = i + 1;
+            superblock->free_inodes_list[t] = superblock->free_inodes_list[t] | c;
+            superblock->free_inode_index = (i + 1) % MAX_INODES;
             return i;
         }
         
@@ -101,4 +71,12 @@ int get_free_inode()
 
     printf("ERROR: No inodes free\n");
     return -1;
+}
+
+void add_inode_to_free_list(int i)
+{
+    int t = i / 8;
+    int j = i % 8;
+    unsigned char c = 1 << j;
+    superblock->free_inodes_list[t] = superblock->free_inodes_list[t] | c;
 }

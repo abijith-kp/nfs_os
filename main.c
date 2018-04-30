@@ -1,170 +1,72 @@
 #include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "avl.h"
+#include "fs.h"
 #include "inode.h"
-#include "directories.h"
+#include "commands.h"
+#include "constants.h"
 #include "superblock.h"
+#include "directories.h"
 
-extern SUPERBLOCK *superblock;
-extern S_DIRECTORY *root_dir;
-
-NODE *inode_index = NULL;
-extern NODE *directory_index;
-
+SUPERBLOCK *superblock = NULL;
+S_DIRECTORY *root_dir = NULL;
 int fd = -1;
 
-void init_fs(char *fs_name)
+int is_created(char *filename)
 {
-    // inode_index = g_hash_table_new(g_direct_hash, g_direct_equal);
-    // directory_index = g_hash_table_new(g_direct_hash, g_direct_equal);
-
-    init_superblock();
-
-    /* we'll create a root directory also */
-    root_dir = mk_root();
-
-    fd = open(fs_name, O_RDWR|O_CREAT, S_IRWXU|S_IRGRP|S_IROTH);
+    struct stat st;
+    if (stat(filename, &st) == -1)
+        return 0;
+    return 1;
 }
 
-void _listdir(S_DIRECTORY *dir)
+void print_dir(S_DIRECTORY *dir)
 {
-    DIR_ENTRY *dir_entry = dir->dir_entry;
-    for (int j=0; j< MAX_ENTRIES; j++)
-    {
-        if (dir_entry[j].inode_number == 0)
-            continue;
-        printf("%d\t%s\n", dir_entry[j].inode_number,
-                           dir_entry[j].filename);
-    }
+    INODE *in = get_inode(dir->inode);
+    printf("=========\n");
+    printf("inode: %d\n", dir->inode);
+    printf("block: %d\n", in->entries[0]);
+    printf("name: %s\n", dir->name);
+    for (int i=0; i<dir->count; i++)
+        printf("== %s %d ==\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+    printf("=========\n");
 }
 
-/* always absolute path should be given */
-void listdir(char *dir)
+int init_fs(char *name)
 {
-    S_DIRECTORY *root = root_dir;
-    char *d = NULL;
-    int flag = 0;
+    int flag = is_created(name);
+    fd = open(name, O_RDWR|O_CREAT, S_IRWXU|S_IRGRP|S_IROTH);
+    superblock = calloc(1, sizeof(SUPERBLOCK));
 
-    if (strcmp(dir, "/") == 0)
+    if (flag == 1)
     {
-        _listdir(root);
-        return;
+        read(fd, superblock, sizeof(SUPERBLOCK));
+        root_dir = get_directory(ROOT_INODE);
+    }
+    else
+    {
+        strcpy(superblock->fs_name, name);
+        memset(superblock->free_block_list, 0, sizeof(superblock->free_block_list));
+        superblock->free_blk_index = 1;
+        memset(superblock->free_inodes_list, 0, sizeof(superblock->free_inodes_list));
+        superblock->free_inode_index = 1;
+
+        root_dir = make_root();
     }
 
-    char *dd = strdup(dir);
-    d = strtok(dd, "/");
-    while (d)
-    {
-        flag = -1;
-        DIR_ENTRY *dir_entry = root->dir_entry;
-        for (int j=0; j< MAX_ENTRIES; j++)
-        {
-            if (strcmp(d, dir_entry[j].filename) == 0)
-            {
-                if (dir_entry[j].inode_number != root->dir_entry[1].inode_number)
-                {
-                    INODE *di = get_inode(dir_entry[j].inode_number);
-                    S_DIRECTORY *new_root = get_directory(di, root->dir_entry[1].inode_number);
-                    if (di->filetype == DIRECTORY)
-                        root = new_root;
-                    else if (di->filetype == REGULAR)
-                    {
-                        flag = -1;
-                        break;
-                    }
-                }
-                flag = 1;
-                break;
-            }
-        }
-
-        if ((flag == -1) || (flag == 0))
-            break;
-        d = strtok(NULL, "/");
-    }
-
-    if (flag == -1)
-        printf("Not directory: %s ==> %s\n", d, dir);
-    if ((!d) && flag)
-    {
-        _listdir(root);
-        return;
-    }
-
-    printf("Not directory: %s ==> %s\n", d, dir);
+    return flag;
 }
 
-/* always absolute path should be given */
-void makedir(char *dirname)
+void uninit_fs()
 {
-    char *dd = strdup(dirname);
-    S_DIRECTORY *root = root_dir;
-
-    int flag = 0;
-
-    char *pos;
-    char *d = strtok_r(dd, "/", &pos);
-
-    while (d)
-    {
-        flag = -1;
-        DIR_ENTRY *dir_entry = root->dir_entry;
-        for (int j=0; j< MAX_ENTRIES; j++)
-        {
-            if (dir_entry[j].inode_number == 0)
-                continue;
-            printf(">%s %s\n", d, dir_entry[j].filename);
-            if (strcmp(d, dir_entry[j].filename) == 0)
-            {
-                if (dir_entry[j].inode_number != root->dir_entry[1].inode_number)
-                {
-                    printf("<<<\n");
-                    INODE *di = get_inode(dir_entry[j].inode_number);
-                    S_DIRECTORY *new_root = get_directory(di, root->dir_entry[1].inode_number);
-                    if (di->filetype == DIRECTORY)
-                    {
-                        root = new_root;
-                    }
-                    else if (di->filetype == REGULAR)
-                    {
-                        break;
-                    }
-                }
-                flag = 1;
-                break;
-            }
-        }
-
-        if (flag == -1)
-            break;
-        d = strtok_r(NULL, "/", &pos);
-    }
-
-    if (flag == -1)
-    {
-        if (strlen(pos) == 0)
-        {
-            // printf("make new directory: %d %s %ld\n", root->dir_entry[0].inode_number, pos, strlen(pos));
-
-            printf("alloc\n");
-            int i = get_free_inode();
-            INODE *di = inode_alloc(i, DIRECTORY);
-
-            /* add dir variable to cache */
-            S_DIRECTORY *dir = get_directory(di, root->dir_entry[0].inode_number);
-            add_entry_to_parent(root, d, i);
-        }
-        else
-            printf("Wrong directory path: %s ==> %s\n", d, dirname);
-        return;
-    }
-
-    printf("Directory already existing: %s ==> %s\n", d, dirname);
+    lseek(fd, 0, SEEK_SET);
+    write(fd, superblock, sizeof(SUPERBLOCK));
+    close(fd);
 }
 
 void shell()
@@ -180,13 +82,26 @@ void shell()
 
         if (strncmp(cmd, "e", 1) == 0)
             break;
+        else if (strcmp(cmd, "\n") == 0)
+            continue;
 
-        dir[strlen(dir)-1] = 0;
+        if (dir != NULL)
+            dir[strlen(dir)-1] = 0;
+        else
+        {
+            cmd[strlen(cmd)-1] = 0;
+            dir = ".";
+        }
 
+        printf("||| %s %s\n", cmd, dir);
         if (strcmp(cmd, "ls") == 0)
             listdir(dir);
         else if (strcmp(cmd, "mk") == 0)
             makedir(dir);
+        else if (strcmp(cmd, "cd") == 0)
+            changedir(dir);
+        else if (strcmp(cmd, "rmdir") == 0)
+            removedir(dir);
         else
             printf("Not implemented");
 
@@ -201,7 +116,6 @@ int length(char *argv[])
         l++;
     return l;
 }
-
 
 void run_test()
 {
@@ -234,16 +148,14 @@ void run_test()
     }
 }
 
+
 int main(int argc, char *argv[])
 {
     init_fs("network.fs");
 
-    #ifdef TEST
-    run_test();
-    #else
     shell();
-    #endif
 
-    close(fd);
+    uninit_fs();
+
     return 0;
 }

@@ -1,70 +1,150 @@
+#include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "avl.h"
+#include "fs.h"
+#include "constants.h"
+#include "superblock.h"
 #include "directories.h"
 
-NODE *directory_index = NULL;
+extern int fd;
+extern SUPERBLOCK *superblock;
+extern S_DIRECTORY *root_dir;
 
 void write_directory(S_DIRECTORY *dir)
 {
-    /* write directory metadata into disk */
+    INODE *inode = get_inode(dir->inode);
+    int block = inode->entries[0];
+
+    int ssize = sizeof(SUPERBLOCK);
+    int offset = ssize + ((MAX_INODES + 1) * sizeof(INODE)) + ((block - 1) * BLOCK_SIZE);
+    lseek(fd, offset, SEEK_SET);
+    write(fd, dir, sizeof(S_DIRECTORY));
 }
 
-S_DIRECTORY *mk_root()
+
+S_DIRECTORY *get_directory(int inode)
 {
-    int i = get_free_inode();
-
-    /* TODO: add root_inode to inode-cache */
-    INODE *root_inode = inode_alloc(i, DIRECTORY);
-
+    INODE *c_inode = get_inode(inode);
     S_DIRECTORY *dir = calloc(1, sizeof(S_DIRECTORY));
-    strncpy((dir->dir_entry[0]).filename, CUR_DIR, MAX_FILE_NAME);
-    strncpy((dir->dir_entry[1]).filename, PARENT_DIR, MAX_FILE_NAME);
+    int ssize = sizeof(SUPERBLOCK);
 
-    (dir->dir_entry[0]).inode_number = i;
-    (dir->dir_entry[1]).inode_number = i;
+    int block = c_inode->entries[0];
+    int offset = ssize + ((MAX_INODES + 1) * sizeof(INODE)) + ((block - 1) * BLOCK_SIZE);
+    lseek(fd, offset, SEEK_SET);
+    read(fd, dir, sizeof(S_DIRECTORY));
 
-    /* write_directory(dir); */
-    /* writing into cache as of now */
-    // g_hash_table_insert(directory_index, GINT_TO_POINTER(i), dir);
-    insert_avl(&directory_index, dir, i);
     return dir;
 }
 
-void add_entry_to_parent(S_DIRECTORY *parent, char *c_name, int c_inode)
+void rm_entry_from_parent(int parent, int child)
 {
-    for (int i=0; i<MAX_ENTRIES; i++)
+    S_DIRECTORY *p_directory = get_directory(parent);
+    DIR_ENTRY *dentry = p_directory->dir_entry;
+
+    for (int i=2; i<MAX_ENTRIES; i++)
     {
-        if (parent->dir_entry[i].inode_number == 0)
+        if (dentry[i].inode_number == child)
         {
-            parent->dir_entry[i].inode_number = c_inode;
-            strncpy(parent->dir_entry[i].filename, c_name, MAX_FILE_NAME);
+            dentry[i].inode_number = 0;
+            p_directory->count--;
+            write_directory(p_directory);
             break;
         }
     }
 }
 
-S_DIRECTORY *get_directory(INODE *in, int parent_inode)
+void add_entry_to_parent(int parent, S_DIRECTORY *c_directory)
 {
-    // S_DIRECTORY *dir = g_hash_table_lookup(directory_index, GINT_TO_POINTER(in->inode_number));
-    S_DIRECTORY *dir = lookup_avl(directory_index, in->inode_number);
-    printf("dir checking in cache\n");
-    if (dir)
-        return dir;
+    S_DIRECTORY *p_directory = get_directory(parent);
+    DIR_ENTRY *dentry = p_directory->dir_entry;
 
-    printf("dir created\n");
-    dir = calloc(1, sizeof(S_DIRECTORY));
-    strncpy((dir->dir_entry[0]).filename, CUR_DIR, MAX_FILE_NAME);
-    strncpy((dir->dir_entry[1]).filename, PARENT_DIR, MAX_FILE_NAME);
+    for (int i=2; i<MAX_ENTRIES; i++)
+    {
+        if ((strcmp(c_directory->name, dentry[i].filename) != 0) && (dentry[i].inode_number == 0))
+        {
+            strcpy(dentry[i].filename, c_directory->name);
+            dentry[i].inode_number = c_directory->inode;
+            p_directory->count++;
+            write_directory(p_directory);
+            return;
+        }
+    }
+}
 
-    (dir->dir_entry[0]).inode_number = in->inode_number;
-    (dir->dir_entry[1]).inode_number = parent_inode;
+int get_inode_dir(S_DIRECTORY *p_directory, char *d)
+{
+    DIR_ENTRY *dentry = p_directory->dir_entry;
 
-    /* write_directory(dir); */
-    // g_hash_table_insert(directory_index, GINT_TO_POINTER(in->inode_number), dir);
-    insert_avl(&directory_index, dir, in->inode_number);
+    for (int i=2; i<MAX_ENTRIES; i++)
+    {
+        if ((strcmp(d, dentry[i].filename) == 0) && (dentry[i].inode_number != 0))
+            return dentry[i].inode_number;
+    }
+
+    return -1;
+}
+
+
+S_DIRECTORY *make_root()
+{
+    S_DIRECTORY *root = _make_directory("/", ROOT_INODE, 1);
+    return root;
+}
+
+
+S_DIRECTORY *_make_directory(char *name, int parent, int is_root)
+{
+    INODE *c_inode = alloc_inode(DIRECTORY);
+    int inode = c_inode->inode_number;
+
+    /*
+    int start = 0;
+    if (BLOCK_SIZE % sizeof(INODE) == 0)
+        start = BLOCK_SIZE / sizeof(INODE);
+    else
+        start = (BLOCK_SIZE / sizeof(INODE)) + 1;
+    */
+
+    int block = get_free_block();
+    printf("block: (%d) %d %d\n", c_inode->inode_number, block, superblock->free_blk_index);
+    S_DIRECTORY *dir = calloc(1, sizeof(S_DIRECTORY));
+    strcpy(dir->name, name);
+    dir->inode = inode;
+    dir->count = 2;
+
+    DIR_ENTRY *dentry = dir->dir_entry;
+    strcpy(dentry[0].filename, CUR_DIR);
+    dentry[0].inode_number = inode;
+    strcpy(dentry[1].filename, PARENT_DIR);
+    dentry[1].inode_number = parent;
+
+    c_inode->used_entries++;
+    c_inode->entries[0] = block;
+
+    if (!is_root)
+        add_entry_to_parent(parent, dir);
+
+    write_inode(c_inode);
+    write_directory(dir);
 
     return dir;
+}
+
+int is_empty(S_DIRECTORY *dir)
+{
+    int c = 0;
+    for (int i=0; i<MAX_ENTRIES; i++)
+    {
+        if (dir->dir_entry[i].inode_number != 0)
+            c++;
+        if (c == 3)
+            return 0;
+    }
+
+    return 1;
 }
