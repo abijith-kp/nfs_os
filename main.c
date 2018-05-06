@@ -100,8 +100,12 @@ void shell()
             makedir(dir);
         else if (strcmp(cmd, "cd") == 0)
             changedir(dir);
-        else if (strcmp(cmd, "rmdir") == 0)
+        else if (strcmp(cmd, "rm") == 0)
             removedir(dir);
+        else if (strcmp(cmd, "touch") == 0)
+            touch(dir);
+        else if (strcmp(cmd, "nano") == 0)
+            nano(dir);
         else
             printf("Not implemented");
 
@@ -153,7 +157,16 @@ int main(int argc, char *argv[])
 {
     init_fs("network.fs");
 
+#ifndef TEST
     shell();
+#else
+    INODE *in = get_inode(2);
+    printf("[[[[inode: %d %d\n", in->inode_number, in->entries[0]);
+    char b[500], *out;
+    memset(b, 0, 500);
+    out = read_buffer(in->inode_number, 10, 0);
+    printf("[%s]\n", out);
+#endif
 
     uninit_fs();
 

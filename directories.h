@@ -33,12 +33,13 @@ typedef struct
 S_DIRECTORY *mk_root();
 S_DIRECTORY *get_directory(int inode);
 S_DIRECTORY *_make_directory(char *name, int parent, int is_root);
-void add_entry_to_parent(int parent, S_DIRECTORY *c_dirrectory);
+void add_entry_to_parent(int parent, char *name, int inode);
 void write_dir(INODE *inode, S_DIRECTORY *dir);
 void read_dir(INODE *inode, S_DIRECTORY *dir);
 S_DIRECTORY *make_root();
 int get_inode_dir(S_DIRECTORY *p_directory, char *d);
 void rm_entry_from_parent(int parent, int child);
 int is_empty(S_DIRECTORY *dir);
+void write_directory(S_DIRECTORY *dir);
 
 #endif

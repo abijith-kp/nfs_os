@@ -58,17 +58,19 @@ void rm_entry_from_parent(int parent, int child)
     }
 }
 
-void add_entry_to_parent(int parent, S_DIRECTORY *c_directory)
+void add_entry_to_parent(int parent, char *name, int inode)
 {
     S_DIRECTORY *p_directory = get_directory(parent);
     DIR_ENTRY *dentry = p_directory->dir_entry;
 
+    printf(">> %d %s %d\n", parent, name, inode);
     for (int i=2; i<MAX_ENTRIES; i++)
     {
-        if ((strcmp(c_directory->name, dentry[i].filename) != 0) && (dentry[i].inode_number == 0))
+        printf("$$ %d %d %s\n", i, dentry[i].inode_number, dentry[i].filename);
+        if (dentry[i].inode_number == 0)
         {
-            strcpy(dentry[i].filename, c_directory->name);
-            dentry[i].inode_number = c_directory->inode;
+            strcpy(dentry[i].filename, name);
+            dentry[i].inode_number = inode;
             p_directory->count++;
             write_directory(p_directory);
             return;
@@ -127,7 +129,7 @@ S_DIRECTORY *_make_directory(char *name, int parent, int is_root)
     c_inode->entries[0] = block;
 
     if (!is_root)
-        add_entry_to_parent(parent, dir);
+        add_entry_to_parent(parent, dir->name, dir->inode);
 
     write_inode(c_inode);
     write_directory(dir);

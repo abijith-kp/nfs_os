@@ -22,6 +22,7 @@ void init_superblock(char *fs_name, int flag)
     {
         superblock->dirty = 1;
         superblock->free_inode_index = 1;
+        superblock->free_blk_index = 1;
         strcpy(superblock->fs_name, fs_name);
     }
     else
