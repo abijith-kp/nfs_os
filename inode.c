@@ -39,7 +39,7 @@ INODE *alloc_inode(int filetype)
     n_inode->inode_number = i;
     n_inode->filetype = filetype;
     n_inode->used_entries = 0;
-    n_inode->size = i;
+    n_inode->size = 0;
 
     int ssize = sizeof(SUPERBLOCK);
     int offset = ssize + ((i - 1) * sizeof(INODE));

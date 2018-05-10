@@ -106,6 +106,8 @@ void shell()
             touch(dir);
         else if (strcmp(cmd, "nano") == 0)
             nano(dir);
+        else if (strcmp(cmd, "cat") == 0)
+            cat(dir);
         else
             printf("Not implemented");
 
@@ -160,11 +162,11 @@ int main(int argc, char *argv[])
 #ifndef TEST
     shell();
 #else
-    INODE *in = get_inode(2);
+    INODE *in = get_inode(5);
     printf("[[[[inode: %d %d\n", in->inode_number, in->entries[0]);
     char b[500], *out;
     memset(b, 0, 500);
-    out = read_buffer(in->inode_number, 10, 0);
+    out = read_buffer(in, 10, 0);
     printf("[%s]\n", out);
 #endif
 

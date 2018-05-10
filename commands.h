@@ -7,5 +7,6 @@ void changedir(char *path);
 void removedir(char *path);
 void touch(char *path);
 void nano(char *path);
+void cat(char *path);
 
 #endif

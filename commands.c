@@ -347,6 +347,7 @@ void nano(char *path)
         return;
     }
 
+    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
     while (1)
     {
         memset(buffer, 0, BLOCK_SIZE);
@@ -358,7 +359,82 @@ void nano(char *path)
         offset += BLOCK_SIZE;
     }
 
-    printf("nano inode: %d %d\n", inode->inode_number, inode->entries[0]);
     write_inode(inode);
     root_dir = get_directory(saved_pos);
+
+    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
+}
+
+void cat(char *path)
+{
+    char *buffer;
+    int offset = 0;
+    INODE *inode;
+
+    /* get inode from loping */
+
+    char *p = strdup(path);
+    char *tmp = strtok(p, "/");
+    char *cur = tmp, *prev = NULL;
+    int saved_pos = root_dir->inode;
+
+    if (path[0] == '/')
+        root_dir = get_directory(ROOT_INODE);
+    else
+        root_dir = get_directory(root_dir->inode);
+    S_DIRECTORY *root = root_dir;
+
+    while (tmp)
+    {
+        tmp = strtok(NULL, "/");
+        if (tmp)
+        {
+            prev = cur;
+            cur = tmp;
+            int i = get_inode_dir(root, prev);
+            if (i == -1)
+            {
+                printf("1File do not exist...\n");
+                return;
+            }
+            root = get_directory(i);
+        }
+    }
+
+
+    int i = 0;
+    if (cur != NULL)
+    {
+        i = get_inode_dir(root, cur);
+        printf("[[%s %s %d]]\n", root->name, cur, i);
+        if (i == -1)
+        {
+            printf("File do not exist...\n");
+            return;
+        }
+        
+        inode = get_inode(i);
+    }
+    else
+    {
+        printf("Invalid path -- root\n");
+        return;
+    }
+
+    offset = inode->size;
+    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
+    while (1)
+    {
+        if (offset <= 0)
+            break;
+
+        buffer = read_buffer(inode, BLOCK_SIZE, offset);
+        write(1, buffer, BLOCK_SIZE);
+        offset -= BLOCK_SIZE;
+    }
+
+    root_dir = get_directory(saved_pos);
+
+    printf("\n");
+    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
 }

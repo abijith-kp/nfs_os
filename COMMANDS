@@ -1,0 +1,3 @@
+gcc -g main.c directories.c commands.c inode.c fs.c -Wall
+
+gcc -g main.c directories.c commands.c inode.c fs.c -Wall -DTEST

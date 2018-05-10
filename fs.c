@@ -97,10 +97,12 @@ void write_buffer(INODE *in, char *buffer, int size, int offset)
         size -= BLOCK_SIZE;
     }
 
+    if (in->size < offset + size)
+        in->size = offset + size;
     write_inode(in);
 }
 
-char *read_buffer(int inode, int size, int offset)
+char *read_buffer(INODE *in, int size, int offset)
 {
     if ((offset + size) > (MAX_ENTRIES * BLOCK_SIZE))
     {
@@ -111,7 +113,7 @@ char *read_buffer(int inode, int size, int offset)
     char *buffer = calloc(size, sizeof(char));
     char *b = buffer;
 
-    INODE *in = get_inode(inode);
+    // INODE *in = get_inode(inode);
     int offset_b = offset / BLOCK_SIZE;
     
     for (int i=0; i<offset_b; i++)
@@ -123,16 +125,16 @@ char *read_buffer(int inode, int size, int offset)
     if (in->entries[offset_b] == 0)
         in->entries[offset_b] = get_free_block();
 
-printf("read %d [%d] %d\n", inode, in->inode_number, in->entries[offset_b]);
+printf("read [%d] %d\n", in->inode_number, in->entries[offset_b]);
     int offset_rest = offset - (offset_b * BLOCK_SIZE);
-printf("read %d [%d] %d %d\n", inode, in->inode_number, in->entries[offset_b], offset_rest);
+printf("read [%d] %d %d\n", in->inode_number, in->entries[offset_b], offset_rest);
 
     read_block(in->entries[offset_b], buffer, (BLOCK_SIZE - offset_rest), offset_rest);
-printf("read %d [%d] %d\n", inode, in->inode_number, in->entries[offset_b]);
+printf("read [%d] %d\n", in->inode_number, in->entries[offset_b]);
     buffer += (BLOCK_SIZE - offset_rest);
     size -= (BLOCK_SIZE - offset_rest);
 
-    printf("inode000: %d %d\n", inode, in->inode_number);
+    printf("inode000: %d %d\n", in->inode_number, in->size);
     for (int i=offset_b+1; i<MAX_ENTRIES; i++)
     {
         if (size <= 0)
@@ -146,6 +148,8 @@ printf("read %d [%d] %d\n", inode, in->inode_number, in->entries[offset_b]);
         size -= BLOCK_SIZE;
     }
 
+    if (in->size < offset + size)
+        in->size = offset + size;
     write_inode(in);
     return b;
 }
