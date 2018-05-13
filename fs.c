@@ -79,9 +79,11 @@ void write_buffer(INODE *in, char *buffer, int size, int offset)
         in->entries[offset_b] = get_free_block();
 
     int offset_rest = offset - (offset_b * BLOCK_SIZE);
-    write_block(in->entries[offset_b], buffer, (BLOCK_SIZE - offset_rest), offset_rest);
-    buffer += (BLOCK_SIZE - offset_rest);
-    size -= (BLOCK_SIZE - offset_rest);
+    int t = MIN(size, (BLOCK_SIZE - offset_rest));
+    printf("size: %d, offset: %d, buffer: %s, t: %d\n", size, offset, buffer, t);
+    write_block(in->entries[offset_b], buffer, t, offset_rest);
+    buffer += t; // (BLOCK_SIZE - offset_rest);
+    size -= t; // (BLOCK_SIZE - offset_rest);
 
     printf("inode: %d %d\n", in->entries[0], in->inode_number);
     for (int i=offset_b+1; i<MAX_ENTRIES; i++)

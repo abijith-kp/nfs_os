@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void get_server(struct sockaddr_in *server, char *addr,
                 int port, int *sock)
@@ -15,14 +16,6 @@ void get_server(struct sockaddr_in *server, char *addr,
         printf("Socket creation error\n");
         exit(0);
     }
-
-    if (bind(*sock, (struct sockaddr *)server, sizeof(struct sockaddr_in)) == -1)
-    {
-        printf("Bind error\n");
-        exit(0);
-    }
-
-    listen(sock, 5);
 
     memset(server, 0, sizeof(struct sockaddr_in));
     server->sin_family = AF_INET;
