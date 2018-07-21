@@ -20,12 +20,10 @@ void makedir(char *path)
     else
         root_dir = get_directory(root_dir->inode);
     S_DIRECTORY *root = root_dir;
-    printf("makedir: %s\n", path);
 
     while (tmp)
     {
         tmp = strtok(NULL, "/");
-        printf("$$$$$ %s %s %s %s\n", prev, cur, root->name, tmp);
         if (tmp)
         {
             prev = cur;
@@ -41,7 +39,6 @@ void makedir(char *path)
         }
     }
 
-    printf(">> %s %s %s\n", prev, cur, root->name);
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
@@ -92,7 +89,7 @@ void listdir(char *path)
             int i = get_inode_dir(root, prev);
             if (i == -1)
             {
-                printf("1File do not exist...\n");
+                printf("File do not exist...\n");
                 root_dir = get_directory(saved_pos);
                 return;
             }
@@ -103,7 +100,6 @@ void listdir(char *path)
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, i);
         if (i == -1)
         {
             printf("File do not exist...\n");
@@ -114,10 +110,7 @@ void listdir(char *path)
         INODE *in = get_inode(i);
         if (in->filetype != DIRECTORY)
         {
-            printf("=========\n");
-            printf("name: %s\n", cur);
-            printf("inode: %d\n", i);
-            printf("=========\n");
+            printf("%s\t%d\n", cur, i);
             root_dir = get_directory(saved_pos);
             return;
         }
@@ -151,7 +144,7 @@ void changedir(char *path)
             int i = get_inode_dir(root, prev);
             if (i == -1)
             {
-                printf("1File do not exist...\n");
+                printf("File do not exist...\n");
                 return;
             }
             root = get_directory(i);
@@ -161,7 +154,6 @@ void changedir(char *path)
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, i);
         if (i == -1)
         {
             printf("File do not exist...\n");
@@ -203,7 +195,7 @@ void removedir(char *path)
             int i = get_inode_dir(root, prev);
             if (i == -1)
             {
-                printf("1File do not exist...\n");
+                printf("File do not exist...\n");
                 return;
             }
             root = get_directory(i);
@@ -213,7 +205,6 @@ void removedir(char *path)
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, i);
         if (i == -1)
         {
             printf("File do not exist...\n");
@@ -247,12 +238,10 @@ void touch(char *path)
     else
         root_dir = get_directory(root_dir->inode);
     S_DIRECTORY *root = root_dir;
-    printf("makedir: %s\n", path);
 
     while (tmp)
     {
         tmp = strtok(NULL, "/");
-        printf("$$$$$ %s %s %s %s\n", prev, cur, root->name, tmp);
         if (tmp)
         {
             prev = cur;
@@ -268,7 +257,6 @@ void touch(char *path)
         }
     }
 
-    printf(">> %s %s %s\n", prev, cur, root->name);
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
@@ -280,7 +268,6 @@ void touch(char *path)
         }
 
         INODE *inode = alloc_inode(REGULAR);
-        printf("%d %d %s %d\n", root->inode, i, cur, inode->filetype);
         add_entry_to_parent(root->inode, cur, inode->inode_number);
     }
     else
@@ -320,7 +307,7 @@ void nano(char *path)
             int i = get_inode_dir(root, prev);
             if (i == -1)
             {
-                printf("1File do not exist...\n");
+                printf("File do not exist...\n");
                 return;
             }
             root = get_directory(i);
@@ -332,7 +319,6 @@ void nano(char *path)
     if (cur != NULL)
     {
         i = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, i);
         if (i == -1)
         {
             printf("File do not exist...\n");
@@ -347,22 +333,20 @@ void nano(char *path)
         return;
     }
 
-    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
     while (1)
     {
         memset(buffer, 0, BLOCK_SIZE);
-        read(1, buffer, BLOCK_SIZE);
+        int t = read(1, buffer, BLOCK_SIZE);
         if (strcmp(buffer, "\n") == 0)
             break;
 
-        write_buffer(inode, buffer, BLOCK_SIZE, offset);
-        offset += BLOCK_SIZE;
+        write_buffer(inode, buffer, t, offset);
+        // offset += BLOCK_SIZE;
+        offset += strlen(buffer);
     }
 
     write_inode(inode);
     root_dir = get_directory(saved_pos);
-
-    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
 }
 
 void cat(char *path)
@@ -394,7 +378,7 @@ void cat(char *path)
             int i = get_inode_dir(root, prev);
             if (i == -1)
             {
-                printf("1File do not exist...\n");
+                printf("File do not exist...\n");
                 return;
             }
             root = get_directory(i);
@@ -406,7 +390,6 @@ void cat(char *path)
     if (cur != NULL)
     {
         i = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, i);
         if (i == -1)
         {
             printf("File do not exist...\n");
@@ -422,19 +405,19 @@ void cat(char *path)
     }
 
     offset = inode->size;
-    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
+
+    int off = 0;
     while (1)
     {
         if (offset <= 0)
             break;
 
-        buffer = read_buffer(inode, BLOCK_SIZE, offset);
-        write(1, buffer, BLOCK_SIZE);
+        buffer = read_buffer(inode, BLOCK_SIZE, off);
+        // write(1, buffer, BLOCK_SIZE);
+        printf("%s", buffer);
         offset -= BLOCK_SIZE;
+        off += BLOCK_SIZE;
     }
 
     root_dir = get_directory(saved_pos);
-
-    printf("\n");
-    printf("nano inode: %d %d %d\n", inode->inode_number, inode->entries[0], inode->size);
 }

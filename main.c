@@ -17,24 +17,24 @@ SUPERBLOCK *superblock = NULL;
 S_DIRECTORY *root_dir = NULL;
 int fd = -1;
 
+void print_dir(S_DIRECTORY *dir)
+{
+    // INODE *in = get_inode(dir->inode);
+    printf("inode: %d\n", dir->inode);
+    printf("name: %s\n", dir->name);
+    for (int i=0; i<MAX_ENTRY; i++)
+    {
+        if (dir->dir_entry[i].inode_number)
+            printf(" %s\t%d\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+    }
+}
+
 int is_created(char *filename)
 {
     struct stat st;
     if (stat(filename, &st) == -1)
         return 0;
     return 1;
-}
-
-void print_dir(S_DIRECTORY *dir)
-{
-    INODE *in = get_inode(dir->inode);
-    printf("=========\n");
-    printf("inode: %d\n", dir->inode);
-    printf("block: %d\n", in->entries[0]);
-    printf("name: %s\n", dir->name);
-    for (int i=0; i<dir->count; i++)
-        printf("== %s %d ==\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
-    printf("=========\n");
 }
 
 int init_fs(char *name)
@@ -93,7 +93,6 @@ void shell()
             dir = ".";
         }
 
-        printf("||| %s %s\n", cmd, dir);
         if (strcmp(cmd, "ls") == 0)
             listdir(dir);
         else if (strcmp(cmd, "mk") == 0)

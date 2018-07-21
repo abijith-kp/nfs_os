@@ -63,10 +63,8 @@ void add_entry_to_parent(int parent, char *name, int inode)
     S_DIRECTORY *p_directory = get_directory(parent);
     DIR_ENTRY *dentry = p_directory->dir_entry;
 
-    printf(">> %d %s %d\n", parent, name, inode);
     for (int i=2; i<MAX_ENTRIES; i++)
     {
-        printf("$$ %d %d %s\n", i, dentry[i].inode_number, dentry[i].filename);
         if (dentry[i].inode_number == 0)
         {
             strcpy(dentry[i].filename, name);
@@ -113,13 +111,14 @@ S_DIRECTORY *_make_directory(char *name, int parent, int is_root)
     */
 
     int block = get_free_block();
-    printf("block: (%d) %d %d\n", c_inode->inode_number, block, superblock->free_blk_index);
     S_DIRECTORY *dir = calloc(1, sizeof(S_DIRECTORY));
     strcpy(dir->name, name);
     dir->inode = inode;
     dir->count = 2;
 
     DIR_ENTRY *dentry = dir->dir_entry;
+    for (int i=0; i<MAX_ENTRIES; i++)
+        dentry[i].inode_number = 0;
     strcpy(dentry[0].filename, CUR_DIR);
     dentry[0].inode_number = inode;
     strcpy(dentry[1].filename, PARENT_DIR);
