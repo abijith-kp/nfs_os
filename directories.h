@@ -1,5 +1,5 @@
 #ifndef __DIRECTORIES_H
-  #define __DIRECTORIES_H
+#define __DIRECTORIES_H
 
 #include "inode.h"
 

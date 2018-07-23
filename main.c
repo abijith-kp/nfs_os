@@ -80,6 +80,9 @@ void shell()
         char *cmd = strtok(buffer, " ");
         char *dir = strtok(NULL, " ");
 
+        // For cp and mv commands
+        char* dir2 = strtok(NULL, " ");
+
         if (strncmp(cmd, "e", 1) == 0)
             break;
         else if (strcmp(cmd, "\n") == 0)
@@ -91,6 +94,14 @@ void shell()
         {
             cmd[strlen(cmd)-1] = 0;
             dir = ".";
+        }
+
+        if (dir2 != NULL)
+            dir2[strlen(dir2)-1] = 0;
+        else
+        {
+            cmd[strlen(cmd)-1] = 0;
+            dir2 = ".";
         }
 
         printf("||| %s %s\n", cmd, dir);
@@ -108,6 +119,10 @@ void shell()
             nano(dir);
         else if (strcmp(cmd, "cat") == 0)
             cat(dir);
+        else if (strcmp(cmd, "cp") == 0)
+            copy(dir, dir2);
+        else if (strcmp(cmd, "mv") == 0)
+            move(dir, dir2);
         else
             printf("Not implemented");
 

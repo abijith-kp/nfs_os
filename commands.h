@@ -8,5 +8,7 @@ void removedir(char *path);
 void touch(char *path);
 void nano(char *path);
 void cat(char *path);
+void copy(char* src_path, char* dest_path);
+void move(char* src_path, char* dest_path);
 
 #endif

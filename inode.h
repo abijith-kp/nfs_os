@@ -1,5 +1,5 @@
 #ifndef __INODE_H
-  #define __INODE_H
+#define __INODE_H
 
 #define MAX_ENTRIES 13
 

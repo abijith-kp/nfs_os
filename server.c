@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     {
         memset(buffer, 0, MAX_LEN);
         memset(&client, 0, sizeof(client));
-        if (recvfrom(sock, buffer, MAX_LEN-1, 0, (struct sockaddr *)&client, &length) == -1)
+        if (recvfrom(sock, buffer, MAX_LEN-1, 0, (struct sockaddr *)&client, (socklen_t *)&length) == -1)
             printf("Error in recvfrom()\n");
         else
             printf("SERVER: %s\n", buffer);
