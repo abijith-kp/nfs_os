@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include "fs.h"
 #include "inode.h"
@@ -119,6 +120,7 @@ void __nano(char *path, int client_sock)
     }
     */
     edit_file(path, buffer);
+    free(buffer);
 }
 
 
@@ -154,7 +156,10 @@ char *shell(char *buffer, char *output, int client_sock)
     char *cmd = strtok(buffer, " ");
     char *dir = strtok(NULL, " ");
 
-    printf("command: %s %s\n", cmd, dir);
+    // For cp and mv commands
+    char* dir2 = strtok(NULL, " ");
+    
+    printf("command: %s %s %s\n", cmd, dir, dir2);
 
     if ((strncmp(cmd, "e", 1) == 0) || (strncmp(cmd, "exit", 4) == 0))
     {
@@ -167,6 +172,7 @@ char *shell(char *buffer, char *output, int client_sock)
         return NULL;
     }
 
+    /*
     if (dir != NULL)
         dir[strlen(dir)-1] = 0;
     else
@@ -175,6 +181,29 @@ char *shell(char *buffer, char *output, int client_sock)
         dir = ".";
     }
 
+    if (dir2 != NULL)
+        dir2[strlen(dir2)-1] = 0;
+    else
+    {
+        dir2 = ".";
+    }
+    */
+
+    if (dir == NULL)
+    {
+        cmd[strlen(cmd)-1] = 0;
+    }
+
+    if (dir2 != NULL)
+        dir2[strlen(dir2)-1] = 0;
+    else
+    {
+        dir2 = ".";
+        if (dir)
+            dir[strlen(dir)-1] = 0;
+        else
+            dir = ".";
+    }
     
     memset(output, 0, OUTPUT_LEN);
     freopen("/dev/null", "a", stdout);
@@ -197,6 +226,13 @@ char *shell(char *buffer, char *output, int client_sock)
         //nano(dir);
     else if (strcmp(cmd, "cat") == 0)
         cat(dir);
+    else if (strcmp(cmd, "cp") == 0)
+    {
+        printf("cp: [%s] [%s]\n", dir, dir2);
+        copy(dir, dir2);
+    }
+    else if (strcmp(cmd, "mv") == 0)
+        move(dir, dir2);
     else
         printf("Not implemented");
 
@@ -240,11 +276,12 @@ int init_fs(char *name)
     return flag;
 }
 
-void uninit_fs()
+void uninit_fs(int close_fd)
 {
     lseek(fd, 0, SEEK_SET);
     write(fd, superblock, sizeof(SUPERBLOCK));
-    close(fd);
+    if (close_fd)
+        close(fd);
 }
 
 void get_server(struct sockaddr_in *server, char *addr, int port)
@@ -255,11 +292,20 @@ void get_server(struct sockaddr_in *server, char *addr, int port)
     server->sin_port = htons(port);
 }
 
+void handler(int arg)
+{
+    uninit_fs(1);
+    printf("interupt handled!!\n");
+    exit(0);
+}
+
 int main(int argc, char *argv[])
 {
     struct sockaddr_in server, client;
     char *buffer = calloc(MAX_LEN, sizeof(char));
     int length = sizeof(struct sockaddr_in);
+
+    signal(SIGINT, handler);
 
     init_fs("network.fs");
 
@@ -302,19 +348,21 @@ int main(int argc, char *argv[])
                 // fflush(stdout);
 
                 shell(buffer, output, client_sock);
-                if (status == 0) //(strcmp(buffer, "exit") == 0)
+                if (status == 0)
                     break;
                 // memset(buffer, 0, MAX_LEN);
-                sprintf(output, "%s%s", output, " ");
+                // sprintf(output, "%s%s", output, " ");
+                output[strlen(output)] = ' ';
                 send(client_sock, output, strlen(output), 0);
                 // printf("end of command\n");
             }
         }
 
         close(client_sock);
+        uninit_fs(0);
     }
 
-    uninit_fs();
+    uninit_fs(1);
 
     return 0;
 }

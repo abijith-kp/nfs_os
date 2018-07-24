@@ -111,7 +111,12 @@ char *read_buffer(INODE *in, int size, int offset)
         return NULL;
     }
 
-    char *buffer = calloc(size, sizeof(char));
+    char *buffer = calloc(BLOCK_SIZE, sizeof(char));
+    if (!buffer)
+    {
+        printf("malloc failed\n");
+        exit(0);
+    }
     char *b = buffer;
 
     // INODE *in = get_inode(inode);
@@ -128,6 +133,7 @@ char *read_buffer(INODE *in, int size, int offset)
 
     int offset_rest = offset - (offset_b * BLOCK_SIZE);
 
+    fprintf(stderr, "read_block: %d %d %d\n", in->size, BLOCK_SIZE, offset_rest);
     read_block(in->entries[offset_b], buffer, (BLOCK_SIZE - offset_rest), offset_rest);
     buffer += (BLOCK_SIZE - offset_rest);
     size -= (BLOCK_SIZE - offset_rest);
@@ -144,8 +150,8 @@ char *read_buffer(INODE *in, int size, int offset)
         size -= BLOCK_SIZE;
     }
 
-    if (in->size < offset + size)
-        in->size = offset + size;
+    // if (in->size < offset + size)
+    //     in->size = offset + size;
     write_inode(in);
     return b;
 }

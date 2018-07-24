@@ -17,24 +17,24 @@ SUPERBLOCK *superblock = NULL;
 S_DIRECTORY *root_dir = NULL;
 int fd = -1;
 
-void print_dir(S_DIRECTORY *dir)
-{
-    // INODE *in = get_inode(dir->inode);
-    printf("inode: %d\n", dir->inode);
-    printf("name: %s\n", dir->name);
-    for (int i=0; i<MAX_ENTRY; i++)
-    {
-        if (dir->dir_entry[i].inode_number)
-            printf(" %s\t%d\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
-    }
-}
-
 int is_created(char *filename)
 {
     struct stat st;
     if (stat(filename, &st) == -1)
         return 0;
     return 1;
+}
+
+void print_dir(S_DIRECTORY *dir)
+{
+    INODE *in = get_inode(dir->inode);
+    printf("=========\n");
+    printf("inode: %d\n", dir->inode);
+    printf("block: %d\n", in->entries[0]);
+    printf("name: %s\n", dir->name);
+    for (int i=0; i<dir->count; i++)
+        printf("== %s %d ==\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+    printf("=========\n");
 }
 
 int init_fs(char *name)
@@ -80,6 +80,9 @@ void shell()
         char *cmd = strtok(buffer, " ");
         char *dir = strtok(NULL, " ");
 
+        // For cp and mv commands
+        char* dir2 = strtok(NULL, " ");
+
         if (strncmp(cmd, "e", 1) == 0)
             break;
         else if (strcmp(cmd, "\n") == 0)
@@ -93,6 +96,15 @@ void shell()
             dir = ".";
         }
 
+        if (dir2 != NULL)
+            dir2[strlen(dir2)-1] = 0;
+        else
+        {
+            cmd[strlen(cmd)-1] = 0;
+            dir2 = ".";
+        }
+
+        printf("||| %s %s\n", cmd, dir);
         if (strcmp(cmd, "ls") == 0)
             listdir(dir);
         else if (strcmp(cmd, "mk") == 0)
@@ -107,6 +119,10 @@ void shell()
             nano(dir);
         else if (strcmp(cmd, "cat") == 0)
             cat(dir);
+        else if (strcmp(cmd, "cp") == 0)
+            copy(dir, dir2);
+        else if (strcmp(cmd, "mv") == 0)
+            move(dir, dir2);
         else
             printf("Not implemented");
 
