@@ -36,12 +36,32 @@ void makedir(char *path)
                 cur = NULL;
                 break;
             }
+
+            INODE *in = get_inode(i);
+            if (in->filetype != DIRECTORY)
+            {
+                printf("ERROR: Provide correct directory name");
+                root_dir = get_directory(saved_pos);
+                free(in);
+                return;
+            }
+            else
+                free(in);
+
             root = get_directory(i);
         }
     }
 
     if (cur != NULL)
     {
+        INODE *in = get_inode(root->inode);
+        if (in->filetype != DIRECTORY)
+        {
+            printf("ERROR: Provide correct directory name\n");
+            root_dir = get_directory(saved_pos);
+            return;
+        }
+
         int i = get_inode_dir(root, cur);
         if (i != -1)
         {
@@ -94,6 +114,18 @@ void listdir(char *path)
                 root_dir = get_directory(saved_pos);
                 return;
             }
+
+            INODE *in = get_inode(i);
+            if (in->filetype != DIRECTORY)
+            {
+                printf("ERROR: Provide correct directory name");
+                root_dir = get_directory(saved_pos);
+                free(in);
+                return;
+            }
+            else
+                free(in);
+
             root = get_directory(i);
         }
     }
@@ -339,6 +371,14 @@ void nano(char *path)
         return;
     }
 
+    if (inode->filetype == DIRECTORY)
+    {
+        printf("Error: Trying to write on a directory");
+        free(root_dir);
+        root_dir = get_directory(saved_pos);
+        return;
+    }
+
     while (1)
     {
         memset(buffer, 0, BLOCK_SIZE);
@@ -414,6 +454,14 @@ void cat(char *path)
         return;
     }
 
+    if (inode->filetype == DIRECTORY)
+    {
+        printf("Error: Trying to write on a directory");
+        free(root_dir);
+        root_dir = get_directory(saved_pos);
+        return;
+    }
+
     offset = inode->size;
 
     int off = 0;
@@ -450,7 +498,7 @@ void copy(char* source, char* destination)
         root_dir = get_directory(saved_pos);
     S_DIRECTORY *root = root_dir;
 
-    printf("copy: %s %s %s [%s]\n", cur, prev, tmp, source);
+    // printf("copy: %s %s %s [%s]\n", cur, prev, tmp, source);
     while (tmp)
     {
         tmp = strtok(NULL, "/");
@@ -468,7 +516,7 @@ void copy(char* source, char* destination)
         }
     }
 
-    printf("copy: %s %s %s\n", cur, prev, tmp);
+    // printf("copy: %s %s %s\n", cur, prev, tmp);
 
     int src_file_inode;
     INODE* src_file;
@@ -477,7 +525,7 @@ void copy(char* source, char* destination)
     if (cur != NULL)
     {
         src_file_inode = get_inode_dir(root, cur);
-        printf("[[%s %s %d]]\n", root->name, cur, src_file_inode);
+        // printf("[[%s %s %d]]\n", root->name, cur, src_file_inode);
         if (src_file_inode == -1)
         {
             printf("File does not exist...\n");
@@ -515,7 +563,7 @@ void copy(char* source, char* destination)
     while (tmp)
     {
         tmp = strtok(NULL, "/");
-        printf("$$$$$ %s %s %s %s\n", prev, cur, root->name, tmp);
+        // printf("$$$$$ %s %s %s %s\n", prev, cur, root->name, tmp);
         if (tmp)
         {
             prev = cur;
@@ -531,7 +579,7 @@ void copy(char* source, char* destination)
         }
     }
 
-    printf(">> %s %s %s\n", prev, cur, root->name);
+    // printf(">> %s %s %s\n", prev, cur, root->name);
     if (cur != NULL)
     {
         int i = get_inode_dir(root, cur);
@@ -557,7 +605,7 @@ void copy(char* source, char* destination)
 
         // Create a new inode in the destination directory
         INODE *dest_inode  = alloc_inode(REGULAR);
-        printf("%d %d %s %d %d\n", root->inode, i, src_file_name, dest_inode->inode_number, source_path_inode);
+        // printf("%d %d %s %d %d\n", root->inode, i, src_file_name, dest_inode->inode_number, source_path_inode);
         add_entry_to_parent(root->inode, cur, dest_inode->inode_number); 
 
         // Copy the contents of the source inode to destination inode 

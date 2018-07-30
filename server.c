@@ -133,13 +133,19 @@ void __nano(char *path, int client_sock)
 
 void print_dir(S_DIRECTORY *dir)
 {
-    // INODE *in = get_inode(dir->inode);
     printf("inode: %d\n", dir->inode);
     printf("name: %s\n", dir->name);
     for (int i=0; i<MAX_ENTRY; i++)
     {
         if (dir->dir_entry[i].inode_number)
-            printf(" %s\t%d\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+        {
+            INODE *in = get_inode(dir->dir_entry[i].inode_number);
+            if (in->filetype == DIRECTORY)
+                printf(" %s\t%d\td\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+            else if (in->filetype == REGULAR)
+                printf(" %s\t%d\tf\n", dir->dir_entry[i].filename, dir->dir_entry[i].inode_number);
+            free(in);
+        }
     }
 }
 
@@ -171,23 +177,6 @@ char *shell(char *buffer, char *output, int client_sock)
         status = -1;
         return NULL;
     }
-
-    /*
-    if (dir != NULL)
-        dir[strlen(dir)-1] = 0;
-    else
-    {
-        cmd[strlen(cmd)-1] = 0;
-        dir = ".";
-    }
-
-    if (dir2 != NULL)
-        dir2[strlen(dir2)-1] = 0;
-    else
-    {
-        dir2 = ".";
-    }
-    */
 
     if (dir == NULL)
     {
@@ -228,7 +217,7 @@ char *shell(char *buffer, char *output, int client_sock)
         cat(dir);
     else if (strcmp(cmd, "cp") == 0)
     {
-        printf("cp: [%s] [%s]\n", dir, dir2);
+        // printf("cp: [%s] [%s]\n", dir, dir2);
         copy(dir, dir2);
     }
     else if (strcmp(cmd, "mv") == 0)

@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         if (send(sock, command, strlen(command), 0) == -1) // , (struct sockaddr *)&server, sizeof(server)) == -1)
             printf("Error in sending data\n");
 
-        printf("here i am!!\n");
+        //printf("here i am!!\n");
 
         if (strcmp(command, "exit") == 0)
             break;
