@@ -1,3 +1,8 @@
-gcc -g main.c directories.c commands.c inode.c fs.c -Wall
+For server:
+    
+    gcc -g directories.c commands.c inode.c fs.c server.c -o server
 
-gcc -g main.c directories.c commands.c inode.c fs.c -Wall -DTEST
+
+For client:
+
+    gcc client.c -o client
